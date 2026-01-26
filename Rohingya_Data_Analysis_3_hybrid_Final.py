@@ -1512,6 +1512,7 @@ st.divider()
 # =========================
 
 st.markdown("## Actor lift vs adversarial themes (who overperforms where)")
+st.write("This heatmap shows where different actors overperform or underperform across adversarial narratives or categories. Each cell represents an actor–theme pair, with values indicating how much engagement that theme receives relative to a baseline (actor-level or theme-level). A lift above 1 means the actor received more engagement on that theme than their average.")
 
 def _ensure_adv_bool(d: pd.DataFrame) -> pd.DataFrame:
     d = d.copy()
