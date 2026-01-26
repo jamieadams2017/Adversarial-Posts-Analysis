@@ -1736,9 +1736,9 @@ for platform_name, tab in [("All", t_all), ("Facebook", t_fb), ("YouTube", t_yt)
         with c1:
             top_themes = st.slider("Top themes", 5, 30, 15, key=f"lift_top_{platform_name}")
         with c2:
-            min_total_posts = st.number_input("Min total posts (actor+theme)", 1, 5000, 30, key=f"lift_min_total_{platform_name}")
+            min_total_posts = st.number_input("Min total posts (actor+theme)", 1, 5000, 1, key=f"lift_min_total_{platform_name}")
         with c3:
-            min_adv_posts = st.number_input("Min adversarial posts (actor+theme)", 0, 5000, 10, key=f"lift_min_adv_{platform_name}")
+            min_adv_posts = st.number_input("Min adversarial posts (actor+theme)", 0, 5000, 1, key=f"lift_min_adv_{platform_name}")
 
         adv_only_for_intersection = True  # keep it strict to your request: adversarial theme performance
         lift_df = compute_actor_lift_table(
