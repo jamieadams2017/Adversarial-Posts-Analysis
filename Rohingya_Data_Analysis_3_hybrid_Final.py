@@ -1551,8 +1551,8 @@ def compute_actor_lift_table(
     group_col: str,              # "Narrative" or "Categories"
     baseline_mode: str,          # "Actor baseline" or "Theme baseline"
     adv_only_for_intersection: bool = True,
-    min_total_posts: int = 30,
-    min_adv_posts: int = 10,
+    min_total_posts: int = 1,
+    min_adv_posts: int = 1,
 ) -> pd.DataFrame:
     """
     Returns tidy table with:
