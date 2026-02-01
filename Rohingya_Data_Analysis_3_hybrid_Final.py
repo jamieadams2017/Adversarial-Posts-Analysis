@@ -2919,8 +2919,6 @@ else:
     )
     cat_opts = _safe_multiselect_options(df0, "Categories")
     nar_opts = _safe_multiselect_options(df0, "Narrative")
-
-    sev_opts = _safe_multiselect_options(df0, "Severity")
     mh_opts = _safe_multiselect_options(df0, "Misinformation/Hate")
     mh_opts = sorted({v for v in mh_opts if ("misinformation" in v.lower() or "hate" in v.lower())})
 
@@ -2941,7 +2939,7 @@ else:
     with r2[1]:
         mh_sel = st.multiselect("Misinformation/Hate", mh_opts, default=[], key="content_mh")
     with r2[2]:
-        severity_sel = st.multiselect("Severity", sev_opts, default=[], key="content_severity")
+        search_text = st.text_input("Search text", value="", placeholder="Type to search…", key="content_search_text")
     with r2[3]:
         dmin, dmax = df0["_date"].min(), df0["_date"].max()
         has_dates = pd.notna(dmin) and pd.notna(dmax)
@@ -2975,7 +2973,30 @@ else:
     # multiselect cols
     df = _apply_list_filter(df, "Categories", categories_sel)
     df = _apply_list_filter(df, "Narrative", narrative_sel)
-    df = _apply_list_filter(df, "Severity", severity_sel)
+    # text search (content/title/description/etc.)
+    if search_text:
+        q = str(search_text).strip()
+        if q:
+            ql = q.lower()
+            cand_cols = []
+            if platform_sel == "Facebook":
+                cand_cols = ["Content", "Author", "AuthorId"]
+            elif platform_sel == "YouTube":
+                cand_cols = ["Title", "description", "channelTitle", "channelId"]
+            else:
+                cand_cols = ["Content", "Caption", "Description", "Desc", "Text", "Author", "username", "userName"]
+            cand_cols = [c for c in cand_cols if c in df.columns]
+            if cand_cols:
+                mask = False
+                for c in cand_cols:
+                    mask = mask | df[c].fillna("").astype(str).str.contains(q, case=False, na=False)
+                df = df[mask].copy()
+            else:
+                # fallback: search across all object-like columns
+                obj_cols = [c for c in df.columns if df[c].dtype == object]
+                if obj_cols:
+                    big = df[obj_cols].fillna("").astype(str).agg(" ".join, axis=1)
+                    df = df[big.str.contains(q, case=False, na=False)].copy()
     df = _apply_list_filter(df, "Misinformation/Hate", mh_sel)
 
     # date range filter
