@@ -251,7 +251,7 @@ def pie_with_table(
     st.caption(f"N = {int(total)}")
     st.plotly_chart(fig, key=f"{key_prefix}_pie", width="stretch")
 
-    if show_table:
+    if st.checkbox("Show table", key=f"{key_prefix}_table_toggle"):
         table = d[[name_col, value_col, table_share_name]].copy()
         table.columns = [name_col, table_value_name, table_share_name]
         st.dataframe(table, width="stretch")
@@ -274,7 +274,7 @@ def bar_with_table(
     fig.update_layout(height=height, margin=dict(t=60, b=10, l=10, r=10))
     st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_chart")
 
-    if show_table:
+    if st.checkbox("Show table", key=f"{key_prefix}_table_toggle"):
         st.dataframe(df_bar, width="stretch", key=f"{key_prefix}_table")
 
 def _scope_df(platform_name: str) -> pd.DataFrame:
@@ -999,8 +999,7 @@ for platform_name, tab in [("All", t_all), ("Facebook", t_fb), ("YouTube", t_yt)
         st.caption(f"N = {int(len(scope))}")
         st.plotly_chart(fig, key=f"chart1_actor_{platform_name.lower()}", width="stretch")
 
-        # Optional numbers table
-        if SHOW_TABLES:
+        if st.checkbox("Show table", key=f"chart1_actor_{platform_name.lower()}_table_toggle"):
             st.dataframe(summ, width="stretch")
 
 st.divider()
@@ -2158,6 +2157,9 @@ with st.expander("Misinformation/Hate Analysis", expanded=True):
                 st.caption(f"N = {len(mh2):,}")
                 st.plotly_chart(fig, width="stretch", key=f"mh_actor_rate_{platform_name.lower()}")
 
+                if st.checkbox("Show table", key=f"mh_actor_rate_{platform_name.lower()}_table_toggle"):
+                    st.dataframe(actor_rate, width="stretch")
+
     # -------- RIGHT: 100% stacked distribution (own tabs) --------
     with right2:
         st.markdown("### MH post type distribution by Actor Type")
@@ -2213,6 +2215,9 @@ with st.expander("Misinformation/Hate Analysis", expanded=True):
                 )
 
                 st.plotly_chart(fig2, width="stretch", key=f"mh_actor_pct_{platform_name.lower()}")
+
+                if st.checkbox("Show table", key=f"mh_actor_pct_{platform_name.lower()}_table_toggle"):
+                    st.dataframe(pivot, width="stretch")
 
 
 st.divider()
