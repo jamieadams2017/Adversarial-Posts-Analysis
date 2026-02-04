@@ -551,8 +551,6 @@ with st.container():
         if st.button("🔄 Refresh data", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-    with c2:
-        st.caption("Forces a fresh read from Google Sheets (clears cached data).")
 
     # Percentages are ALWAYS computed against the full dataset
     denom_mode = "Full dataset"
