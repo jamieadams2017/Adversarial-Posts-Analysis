@@ -545,6 +545,15 @@ with st.container():
     sheet_id = st.secrets.get("SHEET_ID", "")
     fb_ws, yt_ws, tt_ws = "Facebook", "YouTube", "TikTok"
 
+    # ✅ Refresh button (works anywhere, sidebar not required)
+    c1, c2 = st.columns([1, 6])
+    with c1:
+        if st.button("🔄 Refresh data", use_container_width=True):
+            st.cache_data.clear()
+            st.rerun()
+    with c2:
+        st.caption("Forces a fresh read from Google Sheets (clears cached data).")
+
     # Percentages are ALWAYS computed against the full dataset
     denom_mode = "Full dataset"
 
