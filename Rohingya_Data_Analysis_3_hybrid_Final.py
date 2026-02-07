@@ -835,7 +835,7 @@ def _render_100pct_chart(d: pd.DataFrame, group_col: str, title: str, height: in
 c1, c2 = st.columns(2)
 
 with c1:
-    _card_open("Adversarial narrative types by platform", "100% stacked share (counts shown on segments).")
+    _card_open("Adversarial narrative types by platform")
     nar_pct = _adv_100pct_by_platform("Narrative", top_n=8)
     _render_100pct_chart(nar_pct, "Narrative", title="")
     if st.checkbox("Show table", key="tbl_adv_pct_narr"):
@@ -843,7 +843,7 @@ with c1:
     _card_close()
 
 with c2:
-    _card_open("Adversarial category types by platform", "100% stacked share (counts shown on segments).")
+    _card_open("Adversarial category types by platform")
     cat_pct = _adv_100pct_by_platform("Categories", top_n=8)
     _render_100pct_chart(cat_pct, "Categories", title="")
     if st.checkbox("Show table", key="tbl_adv_pct_cat"):
