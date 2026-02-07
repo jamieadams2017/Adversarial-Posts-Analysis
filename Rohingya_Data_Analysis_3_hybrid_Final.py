@@ -1066,65 +1066,125 @@ def _scope_df(platform_name: str) -> pd.DataFrame:
         return yt
     return tt
 
+# =========================
+# ROW — Actor activity + (NEW) adversarial actor-share donut
+# Left (1/3): donut of adversarial posts by actor type
+# Right (2/3): existing bar + % adversarial line
+# =========================
+
 st.markdown("### Actor activity and adversarial rate")
-st.write("Bar: Total posts by actor. Line/markers: % of adversarial posts within each actor.")
+st.write("Left: Share of adversarial posts by actor type. Right: Total posts by actor + % adversarial within each actor.")
 
 t_all, t_fb, t_yt, t_tt = st.tabs(["All", "Facebook", "YouTube", "TikTok"])
+
 for platform_name, tab in [("All", t_all), ("Facebook", t_fb), ("YouTube", t_yt), ("TikTok", t_tt)]:
     with tab:
         scope = _scope_df(platform_name)
-        summ = actor_summary(scope)
 
-        if summ.empty:
+        if scope is None or scope.empty:
             st.info("No data.")
             continue
 
-        # Primary: Total posts (bar). Secondary: % adversarial (line/markers).
-        fig = go.Figure()
+        # ---- layout: 1/3 + 2/3
+        c_left, c_right = st.columns([1, 2])
 
-        fig.add_trace(
-            go.Bar(
-                y=summ["Actor Type"],
-                x=summ["TotalPosts"],
-                name="Total posts",
-                orientation="h",
-                text=summ["TotalPosts"],
-                textposition="auto",
+        # =========================
+        # LEFT: Donut (adversarial posts by Actor Type)
+        # =========================
+        with c_left:
+            adv_scope = scope[scope["Adversarial_bool"] == True].copy()
+            adv_scope["Actor Type"] = adv_scope["Actor Type"].replace("", "Unknown").fillna("Unknown").astype(str).str.strip()
+
+            pie_df = (
+                adv_scope["Actor Type"]
+                .value_counts()
+                .reset_index()
             )
-        )
+            pie_df.columns = ["Actor Type", "Posts"]
 
-        fig.add_trace(
-            go.Scatter(
-                y=summ["Actor Type"],
-                x=summ["AdversarialPct"],
-                name="% adversarial",
-                mode="markers+lines",
-                xaxis="x2",
-                text=summ["AdversarialPct"].astype(str) + "%",
-                hovertemplate="Actor=%{y}<br>% adversarial=%{x}%<extra></extra>",
+            if pie_df.empty:
+                st.info("No adversarial posts.")
+            else:
+                fig_pie = px.pie(
+                    pie_df,
+                    names="Actor Type",
+                    values="Posts",
+                    hole=0.55,
+                )
+                fig_pie.update_layout(
+                    title=dict(text=""),
+                    height=420,
+                    margin=dict(t=10, b=10, l=10, r=10),
+                    showlegend=False,
+                )
+                # show labels + leader lines (like your screenshot)
+                fig_pie.update_traces(
+                    textinfo="label+percent",
+                    textposition="outside",
+                    pull=[0.02] * len(pie_df),  # tiny separation helps readability
+                )
+
+                st.caption(f"Adversarial N = {int(pie_df['Posts'].sum())}")
+                st.plotly_chart(fig_pie, key=f"actor_adv_pie_{platform_name.lower()}", width="stretch")
+
+                if st.checkbox("Show table", key=f"actor_adv_pie_{platform_name.lower()}_table_toggle"):
+                    st.dataframe(pie_df, width="stretch")
+
+        # =========================
+        # RIGHT: Existing chart (bar + % line)
+        # =========================
+        with c_right:
+            summ = actor_summary(scope)
+
+            if summ.empty:
+                st.info("No data.")
+                continue
+
+            fig = go.Figure()
+
+            fig.add_trace(
+                go.Bar(
+                    y=summ["Actor Type"],
+                    x=summ["TotalPosts"],
+                    name="Total posts",
+                    orientation="h",
+                    text=summ["TotalPosts"],
+                    textposition="auto",
+                )
             )
-        )
 
-        fig.update_layout(
-            height=420,
-            margin=dict(t=10, b=10, l=10, r=10),
-            barmode="overlay",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            xaxis=dict(title="Total posts"),
-            xaxis2=dict(
-                title="% adversarial",
-                overlaying="x",
-                side="top",
-                range=[0, 100],
-            ),
-            yaxis=dict(title=None),
-        )
+            fig.add_trace(
+                go.Scatter(
+                    y=summ["Actor Type"],
+                    x=summ["AdversarialPct"],
+                    name="% adversarial",
+                    mode="markers+lines",
+                    xaxis="x2",
+                    text=summ["AdversarialPct"].astype(str) + "%",
+                    hovertemplate="Actor=%{y}<br>% adversarial=%{x}%<extra></extra>",
+                )
+            )
 
-        st.caption(f"N = {int(len(scope))}")
-        st.plotly_chart(fig, key=f"chart1_actor_{platform_name.lower()}", width="stretch")
+            fig.update_layout(
+                height=420,
+                margin=dict(t=10, b=10, l=10, r=10),
+                barmode="overlay",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                xaxis=dict(title="Total posts"),
+                xaxis2=dict(
+                    title="% adversarial",
+                    overlaying="x",
+                    side="top",
+                    range=[0, 100],
+                ),
+                yaxis=dict(title=None),
+            )
 
-        if st.checkbox("Show table", key=f"chart1_actor_{platform_name.lower()}_table_toggle"):
-            st.dataframe(summ, width="stretch")
+            st.caption(f"N = {int(len(scope))}")
+            st.plotly_chart(fig, key=f"chart1_actor_{platform_name.lower()}", width="stretch")
+
+            if st.checkbox("Show table", key=f"chart1_actor_{platform_name.lower()}_table_toggle"):
+                st.dataframe(summ, width="stretch")
 
 st.divider()
 
