@@ -736,6 +736,123 @@ with right:
 st.divider()
 
 # =========================
+# 100% stacked bars by platform (Adversarial only)
+# One for Narrative, one for Categories — in one row
+# =========================
+
+def _adv_100pct_by_platform(group_col: str, top_n: int = 8) -> pd.DataFrame:
+    """
+    Returns tidy df with columns:
+      Platform, group_col, Posts, Pct
+    Uses adversarial posts only.
+    Collapses everything beyond top_n (global) into "Others".
+    """
+    # build platform-scoped frames
+    frames = []
+    for plat, d in [("Facebook", fb), ("YouTube", yt), ("TikTok", tt)]:
+        if d is None or d.empty:
+            continue
+        dd = d.copy()
+        if "Adversarial_bool" not in dd.columns:
+            continue
+        dd = dd[dd["Adversarial_bool"] == True]
+        if dd.empty or group_col not in dd.columns:
+            continue
+
+        dd[group_col] = dd[group_col].replace("", "Unknown").fillna("Unknown").astype(str).str.strip()
+        counts = dd[group_col].value_counts().reset_index()
+        counts.columns = [group_col, "Posts"]
+        counts["Platform"] = plat
+        frames.append(counts)
+
+    if not frames:
+        return pd.DataFrame(columns=["Platform", group_col, "Posts", "Pct"])
+
+    all_counts = pd.concat(frames, ignore_index=True)
+
+    # choose top_n groups globally (more stable than per-platform)
+    top_groups = (
+        all_counts.groupby(group_col)["Posts"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(top_n)
+        .index
+        .tolist()
+    )
+
+    all_counts[group_col] = all_counts[group_col].where(all_counts[group_col].isin(top_groups), "Others")
+
+    # re-aggregate after "Others"
+    all_counts = (
+        all_counts.groupby(["Platform", group_col], as_index=False)["Posts"]
+        .sum()
+    )
+
+    # percent within platform
+    totals = all_counts.groupby("Platform")["Posts"].transform("sum")
+    all_counts["Pct"] = (all_counts["Posts"] / totals * 100)
+
+    # sort platforms in your usual order
+    plat_order = ["Facebook", "YouTube", "TikTok"]
+    all_counts["Platform"] = pd.Categorical(all_counts["Platform"], categories=plat_order, ordered=True)
+    all_counts = all_counts.sort_values(["Platform", "Posts"], ascending=[True, False]).reset_index(drop=True)
+
+    return all_counts
+
+
+def _render_100pct_chart(d: pd.DataFrame, group_col: str, title: str, height: int = 320):
+    if d is None or d.empty:
+        st.info("No data.")
+        return
+
+    base = alt.Chart(d).encode(
+        y=alt.Y("Platform:N", title=None),
+        x=alt.X("Pct:Q", title=None, scale=alt.Scale(domain=[0, 100]),
+                axis=alt.Axis(format="~s", values=[0, 25, 50, 75, 100])),
+        color=alt.Color(f"{group_col}:N", title=None, legend=alt.Legend(orient="top")),
+        tooltip=[
+            alt.Tooltip("Platform:N"),
+            alt.Tooltip(f"{group_col}:N", title=group_col),
+            alt.Tooltip("Posts:Q", format=",.0f"),
+            alt.Tooltip("Pct:Q", format=".1f", title="%"),
+        ],
+    )
+
+    bars = base.mark_bar()
+
+    # show count labels inside segments (only when segment isn't tiny)
+    labels = (
+        base.transform_filter("datum.Pct >= 6")
+        .mark_text(dx=-6, align="right", baseline="middle", color="black")  # works well on light bg
+        .encode(text=alt.Text("Posts:Q", format=",.0f"))
+    )
+
+    chart = (bars + labels).properties(height=height, title=title).configure_view(strokeOpacity=0)
+    st.altair_chart(chart, width="stretch")
+
+
+# ---- UI row: two charts side-by-side ----
+c1, c2 = st.columns(2)
+
+with c1:
+    _card_open("Adversarial narrative types by platform", "100% stacked share (counts shown on segments).")
+    nar_pct = _adv_100pct_by_platform("Narrative", top_n=8)
+    _render_100pct_chart(nar_pct, "Narrative", title="")
+    if st.checkbox("Show table", key="tbl_adv_pct_narr"):
+        st.dataframe(nar_pct, width="stretch")
+    _card_close()
+
+with c2:
+    _card_open("Adversarial category types by platform", "100% stacked share (counts shown on segments).")
+    cat_pct = _adv_100pct_by_platform("Categories", top_n=8)
+    _render_100pct_chart(cat_pct, "Categories", title="")
+    if st.checkbox("Show table", key="tbl_adv_pct_cat"):
+        st.dataframe(cat_pct, width="stretch")
+    _card_close()
+    
+st.divider()
+
+# =========================
 # ROW 2 — One row, two pies, separate tab filters
 # Left tabs:  All/Facebook/YouTube/TikTok  -> Categories distribution (adversarial only)
 # Right tabs: All/Facebook/YouTube/TikTok  -> Narrative distribution (adversarial only)
