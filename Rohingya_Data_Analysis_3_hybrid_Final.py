@@ -2407,6 +2407,102 @@ with st.expander("Misinformation/Hate Analysis", expanded=True):
 st.divider()
 
 # =========================
+# Avg engagement by actor (MH-classified posts only)
+# =========================
+
+st.markdown("### Average engagement of MH-classified posts by actor")
+st.write("Includes only posts tagged as Misinformation and/or Hate Speech.")
+
+def _is_mh(x):
+    if pd.isna(x):
+        return False
+    s = str(x).strip().lower()
+    return s not in {"", "n/a", "na", "none"}
+
+def avg_mh_engagement_by_actor(df_scope: pd.DataFrame) -> pd.DataFrame:
+    if df_scope is None or df_scope.empty:
+        return pd.DataFrame(columns=["Actor Type", "Avg engagement", "Posts"])
+
+    d = df_scope.copy()
+
+    # MH-only filter
+    if "Misinformation/Hate" not in d.columns:
+        return pd.DataFrame(columns=["Actor Type", "Avg engagement", "Posts"])
+
+    d = d[d["Misinformation/Hate"].apply(_is_mh)]
+    if d.empty:
+        return pd.DataFrame(columns=["Actor Type", "Avg engagement", "Posts"])
+
+    d["Actor Type"] = (
+        d["Actor Type"]
+        .replace("", "Unknown")
+        .fillna("Unknown")
+        .astype(str)
+        .str.strip()
+    )
+
+    d["Total Engagement"] = pd.to_numeric(
+        d.get("Total Engagement", 0), errors="coerce"
+    ).fillna(0)
+
+    out = (
+        d.groupby("Actor Type", as_index=False)
+         .agg(
+             **{
+                 "Avg engagement": ("Total Engagement", "mean"),
+                 "Posts": ("Total Engagement", "size"),
+             }
+         )
+    )
+
+    out["Avg engagement"] = out["Avg engagement"].round(0).astype(int)
+    out = out.sort_values("Avg engagement", ascending=False)
+
+    return out
+
+
+t_all, t_fb, t_yt, t_tt = st.tabs(["All", "Facebook", "YouTube", "TikTok"])
+
+for platform_name, tab in [
+    ("All", t_all),
+    ("Facebook", t_fb),
+    ("YouTube", t_yt),
+    ("TikTok", t_tt),
+]:
+    with tab:
+        scope = _scope_df(platform_name)
+        mh_avg = avg_mh_engagement_by_actor(scope)
+
+        if mh_avg.empty:
+            st.info("No MH-classified posts.")
+            continue
+
+        fig = px.bar(
+            mh_avg,
+            y="Actor Type",
+            x="Avg engagement",
+            orientation="h",
+            text="Avg engagement",
+        )
+
+        fig.update_layout(
+            height=420,
+            margin=dict(t=10, b=10, l=10, r=10),
+            xaxis_title="Average engagement",
+            yaxis_title=None,
+        )
+
+        st.caption(f"MH posts N = {int(mh_avg['Posts'].sum())}")
+        st.plotly_chart(fig, key=f"mh_avg_actor_{platform_name.lower()}", width="stretch")
+
+        if st.checkbox(
+            "Show table",
+            key=f"mh_avg_actor_{platform_name.lower()}_table_toggle"
+        ):
+            st.dataframe(mh_avg, width="stretch")
+
+
+# =========================
 # When adversarial narratives spike (daily %)
 # =========================
 st.divider()
