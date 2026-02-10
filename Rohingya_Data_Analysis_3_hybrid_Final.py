@@ -867,7 +867,7 @@ def _counts(d: pd.DataFrame, col: str, top_n: int = 10) -> pd.DataFrame:
     s = d[col].replace("", "Unknown").fillna("Unknown").astype(str).str.strip()
     out = s.value_counts().reset_index()
     out.columns = [col, "Posts"]
-    out = top_with_others(out, col, "Posts", top_n=top_n, others_label="Others")
+    # ✅ NO "Others" merging
     return out
 
 def _narr_counts_for_category(d_adv: pd.DataFrame, category_name: str, top_n: int = 10) -> (pd.DataFrame, int):
@@ -886,7 +886,7 @@ def _narr_counts_for_category(d_adv: pd.DataFrame, category_name: str, top_n: in
     s = sub["Narrative"].replace("", "Unknown").fillna("Unknown").astype(str).str.strip()
     out = s.value_counts().reset_index()
     out.columns = ["Narrative", "Posts"]
-    out = top_with_others(out, "Narrative", "Posts", top_n=top_n, others_label="Others")
+    # ✅ NO "Others" merging
     return out, int(len(sub))
 
 def _render_category_pie(container, category_name: str, title: str, key_base: str, top_n: int = 10):
